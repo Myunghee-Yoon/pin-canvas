@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon, Zap, Gauge, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -88,16 +89,11 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
       toast.error('제목을 입력해주세요.');
       return;
     }
-    
-    if (!formData.imageFile) {
-      toast.error('배경 이미지를 업로드해주세요.');
-      return;
-    }
 
-    // 이미지 URL을 전달 (실제로는 서버에 업로드해야 함)
+    // 이미지가 없으면 빈 화이트 캔버스로 생성
     const canvasData = {
       ...formData,
-      imageUrl: imagePreview // 미리보기 URL 사용 (임시)
+      imageUrl: imagePreview || '' // 이미지가 없으면 빈 문자열
     };
 
     onSubmit(canvasData);
@@ -186,7 +182,10 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
 
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">배경 이미지 *</Label>
+            <Label className="text-sm font-medium">배경 이미지 (선택사항)</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              이미지를 업로드하지 않으면 화이트 캔버스로 생성됩니다
+            </p>
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                 dragActive 
@@ -240,37 +239,39 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
                     </Label>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    JPG, PNG, GIF 파일 지원
+                    JPG, PNG, GIF 파일 지원 • 업로드하지 않으면 화이트 캔버스
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Resolution Options */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">해상도 옵션</Label>
-            <RadioGroup
-              value={formData.resolution}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, resolution: value }))}
-              className="space-y-3"
-            >
-              {resolutionOptions.map((option) => (
-                <Card key={option.value} className="border-2 hover:border-blue-200 transition-colors">
-                  <CardContent className="flex items-center space-x-3 p-4">
-                    <RadioGroupItem value={option.value} id={option.value} />
-                    <option.icon className={`w-5 h-5 ${option.color}`} />
-                    <div className="flex-1">
-                      <Label htmlFor={option.value} className="text-base font-medium cursor-pointer">
-                        {option.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">{option.description}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </RadioGroup>
-          </div>
+          {/* Resolution Options - only show when image is uploaded */}
+          {imagePreview && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">해상도 옵션</Label>
+              <RadioGroup
+                value={formData.resolution}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, resolution: value }))}
+                className="space-y-3"
+              >
+                {resolutionOptions.map((option) => (
+                  <Card key={option.value} className="border-2 hover:border-blue-200 transition-colors">
+                    <CardContent className="flex items-center space-x-3 p-4">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <option.icon className={`w-5 h-5 ${option.color}`} />
+                      <div className="flex-1">
+                        <Label htmlFor={option.value} className="text-base font-medium cursor-pointer">
+                          {option.label}
+                        </Label>
+                        <p className="text-sm text-muted-foreground">{option.description}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </RadioGroup>
+            </div>
+          )}
 
           {/* Submit Buttons */}
           <div className="flex space-x-3 pt-4">

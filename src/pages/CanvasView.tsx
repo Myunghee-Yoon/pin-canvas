@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PinInfoModal } from '@/components/PinInfoModal';
 import { CreateLayerModal } from '@/components/CreateLayerModal';
+import ImageIcon from '@/components/ui/icons/ImageIcon';
 
 interface Canvas {
   id: string;
@@ -386,12 +387,25 @@ const CanvasView = () => {
             style={{ minHeight: '600px' }}
             onClick={handleCanvasClick}
           >
-            <img
-              src={canvas.imageUrl}
-              alt={canvas.title}
-              className="w-full h-full object-contain"
-              style={{ minHeight: '600px' }}
-            />
+            {canvas.imageUrl ? (
+              <img
+                src={canvas.imageUrl}
+                alt={canvas.title}
+                className="w-full h-full object-contain"
+                style={{ minHeight: '600px' }}
+              />
+            ) : (
+              <div 
+                className="w-full h-full bg-white flex items-center justify-center text-gray-300"
+                style={{ minHeight: '600px' }}
+              >
+                <div className="text-center">
+                  <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                  <p className="text-lg font-medium opacity-40">화이트 캔버스</p>
+                  <p className="text-sm opacity-30">핀을 추가하려면 클릭하세요</p>
+                </div>
+              </div>
+            )}
             
             {/* Pins */}
             {getVisiblePins().map((pin) => (
