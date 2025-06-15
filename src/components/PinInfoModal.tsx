@@ -53,7 +53,6 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
 
   useEffect(() => {
     if (isNewPin && pin) {
-      // 새 핀인 경우 바로 편집 모드로 시작
       setIsEditing(true);
       setEditData({
         title: pin.title,
@@ -61,8 +60,12 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
         mediaItems: pin.mediaItems || []
       });
     } else if (pin && !isNewPin) {
-      // 기존 핀인 경우 편집 모드 해제
       setIsEditing(false);
+      setEditData({
+        title: pin.title,
+        description: pin.description,
+        mediaItems: pin.mediaItems || []
+      });
     }
   }, [pin, isNewPin]);
 
@@ -78,20 +81,20 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
   };
 
   const handleSave = () => {
-    onUpdate({
+    const updatedPin = {
       ...pin,
       title: editData.title,
       description: editData.description,
       mediaItems: editData.mediaItems
-    });
+    };
+    
+    onUpdate(updatedPin);
     setIsEditing(false);
-    // 새 핀이든 기존 핀이든 저장 후 모달 닫기
     onClose();
   };
 
   const handleCancel = () => {
     if (isNewPin) {
-      // 새 핀 생성을 취소하는 경우 모달 닫기
       onClose();
     } else {
       setIsEditing(false);
@@ -113,6 +116,15 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
     return /\.(mp4|webm|ogg|mov|avi)(\?.*)?$/i.test(url);
   };
 
+  const isYouTubeUrl = (url: string) => {
+    return /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/.test(url);
+  };
+
+  const getYouTubeEmbedUrl = (url: string) => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+  };
+
   const renderMediaItem = (item: MediaItem) => {
     switch (item.type) {
       case 'image':
@@ -132,8 +144,30 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
           />
         );
       case 'url':
-        // URL의 경우 이미지/비디오인지 확인해서 미리보기 제공
-        if (isImageUrl(item.url)) {
+        if (isYouTubeUrl(item.url)) {
+          const embedUrl = getYouTubeEmbedUrl(item.url);
+          return embedUrl ? (
+            <div className="space-y-2">
+              <iframe
+                src={embedUrl}
+                title={item.name || 'YouTube video'}
+                className="w-full h-48 rounded-lg"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700 underline break-all text-sm flex items-center"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                {item.name || item.url}
+              </a>
+            </div>
+          ) : null;
+        } else if (isImageUrl(item.url)) {
           return (
             <div className="space-y-2">
               <img
@@ -141,7 +175,6 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
                 alt={item.name}
                 className="w-full max-h-48 object-contain rounded-lg"
                 onError={(e) => {
-                  // 이미지 로드 실패시 링크로 대체
                   e.currentTarget.style.display = 'none';
                   const linkElement = e.currentTarget.nextElementSibling as HTMLElement;
                   if (linkElement) linkElement.style.display = 'block';
@@ -166,7 +199,6 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
                 controls
                 className="w-full max-h-48 rounded-lg"
                 onError={(e) => {
-                  // 비디오 로드 실패시 링크로 대체
                   e.currentTarget.style.display = 'none';
                   const linkElement = e.currentTarget.nextElementSibling as HTMLElement;
                   if (linkElement) linkElement.style.display = 'block';
@@ -270,7 +302,6 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
                 <h3 className="font-semibold text-lg mb-2">{pin.title}</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap mb-4">{pin.description}</p>
                 
-                {/* Media Display */}
                 {pin.mediaItems && pin.mediaItems.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-medium text-sm text-gray-700">첨부된 미디어</h4>
