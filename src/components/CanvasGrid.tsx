@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MoreVertical, Pin, Layers, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,12 +20,18 @@ interface CanvasGridProps {
 }
 
 export const CanvasGrid: React.FC<CanvasGridProps> = ({ canvases }) => {
+  const navigate = useNavigate();
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('ko-KR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     }).format(date);
+  };
+
+  const handleCanvasClick = (canvasId: string) => {
+    navigate(`/canvas/${canvasId}`);
   };
 
   if (canvases.length === 0) {
@@ -47,6 +54,7 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({ canvases }) => {
         <Card
           key={canvas.id}
           className="group bg-white/60 backdrop-blur-sm border-0 canvas-shadow hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
+          onClick={() => handleCanvasClick(canvas.id)}
         >
           <div className="aspect-video bg-gradient-to-br from-blue-100 to-orange-100 relative overflow-hidden">
             <img
@@ -61,6 +69,10 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({ canvases }) => {
               size="icon"
               variant="ghost"
               className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                // 더보기 메뉴 로직 추가 예정
+              }}
             >
               <MoreVertical className="w-4 h-4" />
             </Button>
