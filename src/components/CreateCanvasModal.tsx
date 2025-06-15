@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon, Zap, Gauge, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +26,7 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
     resolution: 'high' // 'original', 'high', 'medium'
   });
   const [dragActive, setDragActive] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   if (!isOpen) return null;
 
@@ -50,6 +50,14 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
       const file = files[0];
       if (file.type.startsWith('image/')) {
         setFormData(prev => ({ ...prev, imageFile: file }));
+        
+        // 이미지 미리보기 생성
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+        
         toast.success(`이미지 "${file.name}"이 업로드되었습니다.`);
       } else {
         toast.error('이미지 파일만 업로드 가능합니다.');
@@ -61,6 +69,14 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       setFormData(prev => ({ ...prev, imageFile: file }));
+      
+      // 이미지 미리보기 생성
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
       toast.success(`이미지 "${file.name}"이 업로드되었습니다.`);
     }
   };
@@ -78,13 +94,22 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
       return;
     }
 
-    onSubmit(formData);
+    // 이미지 URL을 전달 (실제로는 서버에 업로드해야 함)
+    const canvasData = {
+      ...formData,
+      imageUrl: imagePreview // 미리보기 URL 사용 (임시)
+    };
+
+    onSubmit(canvasData);
+    
+    // 폼 초기화
     setFormData({
       title: '',
       description: '',
       imageFile: null,
       resolution: 'high'
     });
+    setImagePreview('');
     toast.success('새 캔버스가 생성되었습니다!');
   };
 
@@ -173,18 +198,25 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
               onDragOver={handleDrag}
               onDrop={handleDrop}
             >
-              {formData.imageFile ? (
+              {imagePreview ? (
                 <div className="space-y-2">
-                  <ImageIcon className="w-8 h-8 text-green-600 mx-auto" />
-                  <p className="font-medium text-green-600">{formData.imageFile.name}</p>
+                  <img 
+                    src={imagePreview} 
+                    alt="미리보기" 
+                    className="max-h-32 mx-auto rounded-lg border"
+                  />
+                  <p className="font-medium text-green-600">{formData.imageFile?.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {(formData.imageFile.size / 1024 / 1024).toFixed(2)} MB
+                    {formData.imageFile ? (formData.imageFile.size / 1024 / 1024).toFixed(2) : 0} MB
                   </p>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setFormData(prev => ({ ...prev, imageFile: null }))}
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, imageFile: null }));
+                      setImagePreview('');
+                    }}
                   >
                     다른 이미지 선택
                   </Button>

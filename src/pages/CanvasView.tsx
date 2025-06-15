@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Eye, EyeOff, Edit, Trash2, Layers, Pin } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PinInfoModal } from '@/components/PinInfoModal';
 
 interface Canvas {
   id: string;
@@ -40,17 +41,30 @@ const CanvasView = () => {
   const [layers, setLayers] = useState<Layer[]>([]);
   const [pins, setPins] = useState<PinData[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string>('');
+  const [selectedPin, setSelectedPin] = useState<PinData | null>(null);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   useEffect(() => {
-    // 임시 데이터 - 실제로는 API에서 가져와야 함
-    const mockCanvas: Canvas = {
-      id: id || '1',
-      title: id === '1' ? '서울 여행 계획' : '프로젝트 기획서',
-      imageUrl: '/placeholder.svg',
-      createdAt: new Date(),
-      pinCount: 3,
-      layerCount: 2,
-    };
+    // 로컬 스토리지에서 캔버스 데이터 가져오기
+    const savedCanvases = localStorage.getItem('pincanvas_canvases');
+    let canvasData: Canvas | null = null;
+    
+    if (savedCanvases) {
+      const canvases = JSON.parse(savedCanvases);
+      canvasData = canvases.find((c: Canvas) => c.id === id) || null;
+    }
+    
+    // 캔버스가 없으면 임시 데이터 사용
+    if (!canvasData) {
+      canvasData = {
+        id: id || '1',
+        title: id === '1' ? '서울 여행 계획' : '프로젝트 기획서',
+        imageUrl: '/placeholder.svg',
+        createdAt: new Date(),
+        pinCount: 3,
+        layerCount: 2,
+      };
+    }
 
     const mockLayers: Layer[] = [
       {
@@ -75,7 +89,7 @@ const CanvasView = () => {
         x: 200,
         y: 150,
         title: '경복궁',
-        description: '조선 시대의 대표적인 궁궐',
+        description: '조선 시대의 대표적인 궁궐입니다.\n\n운영시간: 09:00-18:00\n입장료: 성인 3,000원',
         layerId: 'layer2',
         canvasId: id || '1',
       },
@@ -84,13 +98,13 @@ const CanvasView = () => {
         x: 350,
         y: 220,
         title: '명동 교자',
-        description: '유명한 만두 맛집',
+        description: '유명한 만두 맛집입니다.\n\n추천메뉴: 왕만두, 물만두\n가격대: 10,000원~15,000원',
         layerId: 'layer1',
         canvasId: id || '1',
       },
     ];
 
-    setCanvas(mockCanvas);
+    setCanvas(canvasData);
     setLayers(mockLayers);
     setPins(mockPins);
     setSelectedLayerId(mockLayers[0]?.id || '');
@@ -114,6 +128,19 @@ const CanvasView = () => {
     };
 
     setPins([...pins, newPin]);
+  };
+
+  const handlePinClick = (pin: PinData) => {
+    setSelectedPin(pin);
+    setIsPinModalOpen(true);
+  };
+
+  const handlePinUpdate = (updatedPin: PinData) => {
+    setPins(pins.map(pin => pin.id === updatedPin.id ? updatedPin : pin));
+  };
+
+  const handlePinDelete = (pinId: string) => {
+    setPins(pins.filter(pin => pin.id !== pinId));
   };
 
   const toggleLayerVisibility = (layerId: string) => {
@@ -263,7 +290,7 @@ const CanvasView = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  alert(`${pin.title}\n${pin.description}`);
+                  handlePinClick(pin);
                 }}
               >
                 <Pin className="w-3 h-3 text-white" />
@@ -272,6 +299,16 @@ const CanvasView = () => {
           </div>
         </div>
       </div>
+
+      {/* Pin Info Modal */}
+      <PinInfoModal
+        pin={selectedPin}
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        onUpdate={handlePinUpdate}
+        onDelete={handlePinDelete}
+        layerColor={selectedPin ? getLayerColor(selectedPin.layerId) : '#6b7280'}
+      />
     </div>
   );
 };
