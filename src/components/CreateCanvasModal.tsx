@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon, Zap, Gauge, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -63,6 +62,13 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
       } else {
         toast.error('이미지 파일만 업로드 가능합니다.');
       }
+    }
+  };
+
+  const handleFileButtonClick = () => {
+    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
     }
   };
 
@@ -232,11 +238,13 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
                       className="hidden"
                       id="image-upload"
                     />
-                    <Label htmlFor="image-upload" asChild>
-                      <Button type="button" variant="outline">
-                        파일 선택
-                      </Button>
-                    </Label>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={handleFileButtonClick}
+                    >
+                      파일 선택
+                    </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     JPG, PNG, GIF 파일 지원 • 업로드하지 않으면 화이트 캔버스

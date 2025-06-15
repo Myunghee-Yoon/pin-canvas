@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Edit, Trash2, Save } from 'lucide-react';
+import { X, Edit, Trash2, Save, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -85,9 +85,8 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
       mediaItems: editData.mediaItems
     });
     setIsEditing(false);
-    if (isNewPin) {
-      onClose();
-    }
+    // 새 핀이든 기존 핀이든 저장 후 모달 닫기
+    onClose();
   };
 
   const handleCancel = () => {
@@ -104,6 +103,14 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
       onDelete(pin.id);
       onClose();
     }
+  };
+
+  const isImageUrl = (url: string) => {
+    return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url);
+  };
+
+  const isVideoUrl = (url: string) => {
+    return /\.(mp4|webm|ogg|mov|avi)(\?.*)?$/i.test(url);
   };
 
   const renderMediaItem = (item: MediaItem) => {
@@ -125,16 +132,70 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
           />
         );
       case 'url':
-        return (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-700 underline break-all"
-          >
-            {item.name || item.url}
-          </a>
-        );
+        // URL의 경우 이미지/비디오인지 확인해서 미리보기 제공
+        if (isImageUrl(item.url)) {
+          return (
+            <div className="space-y-2">
+              <img
+                src={item.url}
+                alt={item.name}
+                className="w-full max-h-48 object-contain rounded-lg"
+                onError={(e) => {
+                  // 이미지 로드 실패시 링크로 대체
+                  e.currentTarget.style.display = 'none';
+                  const linkElement = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (linkElement) linkElement.style.display = 'block';
+                }}
+              />
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700 underline break-all text-sm flex items-center hidden"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                {item.name || item.url}
+              </a>
+            </div>
+          );
+        } else if (isVideoUrl(item.url)) {
+          return (
+            <div className="space-y-2">
+              <video
+                src={item.url}
+                controls
+                className="w-full max-h-48 rounded-lg"
+                onError={(e) => {
+                  // 비디오 로드 실패시 링크로 대체
+                  e.currentTarget.style.display = 'none';
+                  const linkElement = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (linkElement) linkElement.style.display = 'block';
+                }}
+              />
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700 underline break-all text-sm flex items-center hidden"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                {item.name || item.url}
+              </a>
+            </div>
+          );
+        } else {
+          return (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-700 underline break-all flex items-center"
+            >
+              <ExternalLink className="w-4 h-4 mr-2 flex-shrink-0" />
+              {item.name || item.url}
+            </a>
+          );
+        }
       default:
         return null;
     }
