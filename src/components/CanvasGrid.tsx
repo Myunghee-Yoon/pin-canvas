@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Calendar, Pin, Layers, MoreVertical, Edit, Trash2 } from 'lucide-react';
@@ -11,6 +12,12 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,7 +156,7 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({ searchQuery, sortBy }) =
         {filteredAndSortedCanvases.map((canvas) => (
           <ContextMenu key={canvas.id}>
             <ContextMenuTrigger>
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow group">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow group relative">
                 <div className="relative">
                   <img
                     src={canvas.imageUrl}
@@ -157,6 +164,34 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({ searchQuery, sortBy }) =
                     className="w-full h-32 object-cover rounded-t-lg"
                     onClick={() => handleCanvasClick(canvas.id)}
                   />
+                  {/* 삼점 메뉴 버튼 */}
+                  <div className="absolute top-2 right-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="h-8 w-8 bg-white/80 hover:bg-white/90 backdrop-blur-sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleCanvasClick(canvas.id)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          열기
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteCanvasId(canvas.id)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 <CardHeader className="pb-2" onClick={() => handleCanvasClick(canvas.id)}>
                   <CardTitle className="text-lg">{canvas.title}</CardTitle>
