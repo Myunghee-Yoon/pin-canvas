@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Eye, EyeOff, Edit, Trash2, Layers, Pin, Image } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, EyeOff, Edit, Trash2, Layers, Pin, Image, Presentation, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +55,7 @@ const CanvasView = () => {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isCreateLayerModalOpen, setIsCreateLayerModalOpen] = useState(false);
   const [isCreatingNewPin, setIsCreatingNewPin] = useState(false);
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
 
   useEffect(() => {
     // 로컬 스토리지에서 캔버스 데이터 가져오기
@@ -138,6 +139,20 @@ const CanvasView = () => {
     setPins(pinsData);
     setSelectedLayerId(layersData[0]?.id || '');
   }, [id]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isPresentationMode) {
+        setIsPresentationMode(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isPresentationMode]);
 
   const saveData = () => {
     localStorage.setItem(`pincanvas_layers_${id}`, JSON.stringify(layers));
@@ -262,132 +277,156 @@ const CanvasView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 ${isPresentationMode ? 'p-0' : ''}`}>
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-border/50 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/')}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold">{canvas.title}</h1>
-                <p className="text-sm text-muted-foreground">
-                  {pins.length}개의 핀 • {layers.length}개의 레이어
-                </p>
+      {!isPresentationMode && (
+        <header className="bg-white/80 backdrop-blur-sm border-b border-border/50 sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/')}
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div>
+                  <h1 className="text-xl font-bold">{canvas.title}</h1>
+                  <p className="text-sm text-muted-foreground">
+                    {pins.length}개의 핀 • {layers.length}개의 레이어
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary">
+                  선택된 레이어: {layers.find(l => l.id === selectedLayerId)?.name || '없음'}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsPresentationMode(true)}
+                  aria-label="Presentation Mode"
+                >
+                  <Presentation className="w-5 h-5" />
+                </Button>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary">
-                선택된 레이어: {layers.find(l => l.id === selectedLayerId)?.name || '없음'}
-              </Badge>
-            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <div className="flex">
+      <div className={`flex ${isPresentationMode ? 'fixed inset-0 z-50 bg-white' : ''}`}>
         {/* Layer Panel */}
-        <div className="w-80 bg-white/60 backdrop-blur-sm border-r border-border/50 p-6">
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold flex items-center">
-                <Layers className="w-5 h-5 mr-2" />
-                레이어 관리
-              </h2>
-              <Button
-                size="sm"
-                onClick={() => setIsCreateLayerModalOpen(true)}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                추가
-              </Button>
-            </div>
-            
-            <div className="space-y-3">
-              {layers.map((layer) => (
-                <Card
-                  key={layer.id}
-                  className={`cursor-pointer transition-all ${
-                    selectedLayerId === layer.id 
-                      ? 'ring-2 ring-blue-500 bg-blue-50/50' 
-                      : 'hover:bg-gray-50'
-                  }`}
-                  onClick={() => setSelectedLayerId(layer.id)}
+        {!isPresentationMode && (
+          <div className="w-80 bg-white/60 backdrop-blur-sm border-r border-border/50 p-6">
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center">
+                  <Layers className="w-5 h-5 mr-2" />
+                  레이어 관리
+                </h2>
+                <Button
+                  size="sm"
+                  onClick={() => setIsCreateLayerModalOpen(true)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className="w-4 h-4 rounded-full border-2"
-                          style={{ backgroundColor: layer.color }}
-                        />
-                        <span className="font-medium">{layer.name}</span>
+                  <Plus className="w-4 h-4 mr-1" />
+                  추가
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {layers.map((layer) => (
+                  <Card
+                    key={layer.id}
+                    className={`cursor-pointer transition-all ${
+                      selectedLayerId === layer.id 
+                        ? 'ring-2 ring-blue-500 bg-blue-50/50' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => setSelectedLayerId(layer.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className="w-4 h-4 rounded-full border-2"
+                            style={{ backgroundColor: layer.color }}
+                          />
+                          <span className="font-medium">{layer.name}</span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleLayerVisibility(layer.id);
+                            }}
+                          >
+                            {layer.visible ? (
+                              <Eye className="w-4 h-4" />
+                            ) : (
+                              <EyeOff className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 text-red-500 hover:text-red-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteLayer(layer.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                       
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-8 h-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLayerVisibility(layer.id);
-                          }}
-                        >
-                          {layer.visible ? (
-                            <Eye className="w-4 h-4" />
-                          ) : (
-                            <EyeOff className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-8 h-8 text-red-500 hover:text-red-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteLayer(layer.id);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {pins.filter(pin => pin.layerId === layer.id).length}개의 핀
                       </div>
-                    </div>
-                    
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {pins.filter(pin => pin.layerId === layer.id).length}개의 핀
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground bg-blue-50 p-4 rounded-lg">
+              <p className="font-medium mb-2">사용법:</p>
+              <ul className="space-y-1 text-xs">
+                <li>• 레이어를 선택한 후 캔버스를 클릭하여 핀 추가</li>
+                <li>• 눈 아이콘으로 레이어 표시/숨김</li>
+                <li>• 핀을 클릭하여 정보 확인</li>
+                <li>• 핀에 마우스를 올려 미리보기</li>
+                <li>• 휴지통 아이콘으로 레이어 삭제</li>
+              </ul>
             </div>
           </div>
-
-          <div className="text-sm text-muted-foreground bg-blue-50 p-4 rounded-lg">
-            <p className="font-medium mb-2">사용법:</p>
-            <ul className="space-y-1 text-xs">
-              <li>• 레이어를 선택한 후 캔버스를 클릭하여 핀 추가</li>
-              <li>• 눈 아이콘으로 레이어 표시/숨김</li>
-              <li>• 핀을 클릭하여 정보 확인</li>
-              <li>• 핀에 마우스를 올려 미리보기</li>
-              <li>• 휴지통 아이콘으로 레이어 삭제</li>
-            </ul>
-          </div>
-        </div>
+        )}
 
         {/* Canvas Area */}
-        <div className="flex-1 p-6">
+        <div className={`flex-1 relative ${isPresentationMode ? '' : 'p-6'}`}>
+          {isPresentationMode && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-4 right-4 z-20 bg-black/20 hover:bg-black/40 text-white hover:text-white rounded-full"
+              onClick={() => setIsPresentationMode(false)}
+              aria-label="Exit Presentation Mode"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          )}
+
           <div
-            className="relative bg-white rounded-lg shadow-lg overflow-hidden cursor-crosshair"
+            className={`relative bg-white rounded-lg shadow-lg overflow-hidden ${isPresentationMode ? 'w-full h-full cursor-default' : 'cursor-crosshair'}`}
             style={{ minHeight: '600px' }}
-            onClick={handleCanvasClick}
+            onClick={isPresentationMode ? undefined : handleCanvasClick}
           >
             {canvas.imageUrl ? (
               <img
