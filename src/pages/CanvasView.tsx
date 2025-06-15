@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Eye, EyeOff, Edit, Trash2, Layers, Pin, Image } from '
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { PinInfoModal } from '@/components/PinInfoModal';
 import { CreateLayerModal } from '@/components/CreateLayerModal';
 import ImageIcon from '@/components/ui/icons/ImageIcon';
@@ -375,6 +376,7 @@ const CanvasView = () => {
               <li>• 레이어를 선택한 후 캔버스를 클릭하여 핀 추가</li>
               <li>• 눈 아이콘으로 레이어 표시/숨김</li>
               <li>• 핀을 클릭하여 정보 확인</li>
+              <li>• 핀에 마우스를 올려 미리보기</li>
               <li>• 휴지통 아이콘으로 레이어 삭제</li>
             </ul>
           </div>
@@ -407,23 +409,79 @@ const CanvasView = () => {
               </div>
             )}
             
-            {/* Pins */}
+            {/* Pins with HoverCard */}
             {getVisiblePins().map((pin) => (
-              <div
-                key={pin.id}
-                className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center"
-                style={{
-                  left: pin.x - 12,
-                  top: pin.y - 12,
-                  backgroundColor: getLayerColor(pin.layerId),
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePinClick(pin);
-                }}
-              >
-                <Pin className="w-3 h-3 text-white" />
-              </div>
+              <HoverCard key={pin.id} openDelay={300} closeDelay={100}>
+                <HoverCardTrigger asChild>
+                  <div
+                    className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center"
+                    style={{
+                      left: pin.x - 12,
+                      top: pin.y - 12,
+                      backgroundColor: getLayerColor(pin.layerId),
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePinClick(pin);
+                    }}
+                  >
+                    <Pin className="w-3 h-3 text-white" />
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80" side="right" align="start">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getLayerColor(pin.layerId) }}
+                      />
+                      <h4 className="font-semibold text-sm">{pin.title}</h4>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      <p className="whitespace-pre-wrap line-clamp-4">
+                        {pin.description}
+                      </p>
+                    </div>
+
+                    {pin.mediaItems && pin.mediaItems.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">첨부된 미디어:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {pin.mediaItems.slice(0, 4).map((media, index) => (
+                            <div key={media.id || index} className="relative">
+                              {media.type === 'image' ? (
+                                <img
+                                  src={media.url}
+                                  alt={media.name || `미디어 ${index + 1}`}
+                                  className="w-full h-16 object-cover rounded border"
+                                />
+                              ) : media.type === 'video' ? (
+                                <div className="w-full h-16 bg-gray-100 rounded border flex items-center justify-center">
+                                  <span className="text-xs text-gray-500">동영상</span>
+                                </div>
+                              ) : (
+                                <div className="w-full h-16 bg-blue-50 rounded border flex items-center justify-center">
+                                  <span className="text-xs text-blue-600">링크</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {pin.mediaItems.length > 4 && (
+                            <div className="w-full h-16 bg-gray-50 rounded border flex items-center justify-center">
+                              <span className="text-xs text-gray-500">+{pin.mediaItems.length - 4}개 더</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="text-xs text-muted-foreground pt-2 border-t">
+                      클릭하여 자세히 보기
+                    </div>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             ))}
           </div>
         </div>
