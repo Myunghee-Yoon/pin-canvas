@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Edit, Trash2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ interface PinInfoModalProps {
   onUpdate: (pin: PinData) => void;
   onDelete: (pinId: string) => void;
   layerColor: string;
+  isNewPin?: boolean;
 }
 
 export const PinInfoModal: React.FC<PinInfoModalProps> = ({
@@ -40,7 +41,8 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
   onClose,
   onUpdate,
   onDelete,
-  layerColor
+  layerColor,
+  isNewPin = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -48,6 +50,21 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
     description: '',
     mediaItems: [] as MediaItem[]
   });
+
+  useEffect(() => {
+    if (isNewPin && pin) {
+      // 새 핀인 경우 바로 편집 모드로 시작
+      setIsEditing(true);
+      setEditData({
+        title: pin.title,
+        description: pin.description,
+        mediaItems: pin.mediaItems || []
+      });
+    } else if (pin && !isNewPin) {
+      // 기존 핀인 경우 편집 모드 해제
+      setIsEditing(false);
+    }
+  }, [pin, isNewPin]);
 
   if (!isOpen || !pin) return null;
 
@@ -68,10 +85,18 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
       mediaItems: editData.mediaItems
     });
     setIsEditing(false);
+    if (isNewPin) {
+      onClose();
+    }
   };
 
   const handleCancel = () => {
-    setIsEditing(false);
+    if (isNewPin) {
+      // 새 핀 생성을 취소하는 경우 모달 닫기
+      onClose();
+    } else {
+      setIsEditing(false);
+    }
   };
 
   const handleDelete = () => {
@@ -124,7 +149,9 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
               className="w-4 h-4 rounded-full"
               style={{ backgroundColor: layerColor }}
             />
-            <h2 className="text-lg font-semibold">핀 정보</h2>
+            <h2 className="text-lg font-semibold">
+              {isNewPin ? '새 핀 추가' : '핀 정보'}
+            </h2>
           </div>
           <Button
             variant="ghost"
@@ -168,7 +195,7 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
               <div className="flex space-x-2 pt-4">
                 <Button onClick={handleSave} className="flex-1">
                   <Save className="w-4 h-4 mr-2" />
-                  저장
+                  {isNewPin ? '추가' : '저장'}
                 </Button>
                 <Button variant="outline" onClick={handleCancel} className="flex-1">
                   <X className="w-4 h-4 mr-2" />

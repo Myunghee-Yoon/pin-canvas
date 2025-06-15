@@ -52,6 +52,7 @@ const CanvasView = () => {
   const [selectedPin, setSelectedPin] = useState<PinData | null>(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isCreateLayerModalOpen, setIsCreateLayerModalOpen] = useState(false);
+  const [isCreatingNewPin, setIsCreatingNewPin] = useState(false);
 
   useEffect(() => {
     // 로컬 스토리지에서 캔버스 데이터 가져오기
@@ -159,26 +160,43 @@ const CanvasView = () => {
       mediaItems: [],
     };
 
-    const updatedPins = [...pins, newPin];
-    setPins(updatedPins);
-    localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
+    // 새 핀을 생성하고 바로 모달 열기
+    setSelectedPin(newPin);
+    setIsCreatingNewPin(true);
+    setIsPinModalOpen(true);
   };
 
   const handlePinClick = (pin: PinData) => {
     setSelectedPin(pin);
+    setIsCreatingNewPin(false);
     setIsPinModalOpen(true);
   };
 
   const handlePinUpdate = (updatedPin: PinData) => {
-    const updatedPins = pins.map(pin => pin.id === updatedPin.id ? updatedPin : pin);
-    setPins(updatedPins);
-    localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
+    if (isCreatingNewPin) {
+      // 새 핀을 추가
+      const updatedPins = [...pins, updatedPin];
+      setPins(updatedPins);
+      localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
+      setIsCreatingNewPin(false);
+    } else {
+      // 기존 핀을 업데이트
+      const updatedPins = pins.map(pin => pin.id === updatedPin.id ? updatedPin : pin);
+      setPins(updatedPins);
+      localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
+    }
   };
 
   const handlePinDelete = (pinId: string) => {
     const updatedPins = pins.filter(pin => pin.id !== pinId);
     setPins(updatedPins);
     localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
+  };
+
+  const handlePinModalClose = () => {
+    setIsPinModalOpen(false);
+    setIsCreatingNewPin(false);
+    setSelectedPin(null);
   };
 
   const toggleLayerVisibility = (layerId: string) => {
@@ -401,10 +419,11 @@ const CanvasView = () => {
       <PinInfoModal
         pin={selectedPin}
         isOpen={isPinModalOpen}
-        onClose={() => setIsPinModalOpen(false)}
+        onClose={handlePinModalClose}
         onUpdate={handlePinUpdate}
         onDelete={handlePinDelete}
         layerColor={selectedPin ? getLayerColor(selectedPin.layerId) : '#6b7280'}
+        isNewPin={isCreatingNewPin}
       />
 
       {/* Create Layer Modal */}
