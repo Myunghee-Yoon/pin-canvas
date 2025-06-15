@@ -5,6 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ImageVideoUpload } from './ImageVideoUpload';
+
+interface MediaItem {
+  id: string;
+  type: 'image' | 'video' | 'url';
+  url: string;
+  name?: string;
+}
 
 interface PinData {
   id: string;
@@ -14,6 +22,7 @@ interface PinData {
   description: string;
   layerId: string;
   canvasId: string;
+  mediaItems?: MediaItem[];
 }
 
 interface PinInfoModalProps {
@@ -36,7 +45,8 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     title: '',
-    description: ''
+    description: '',
+    mediaItems: [] as MediaItem[]
   });
 
   if (!isOpen || !pin) return null;
@@ -44,7 +54,8 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
   const handleEdit = () => {
     setEditData({
       title: pin.title,
-      description: pin.description
+      description: pin.description,
+      mediaItems: pin.mediaItems || []
     });
     setIsEditing(true);
   };
@@ -53,7 +64,8 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
     onUpdate({
       ...pin,
       title: editData.title,
-      description: editData.description
+      description: editData.description,
+      mediaItems: editData.mediaItems
     });
     setIsEditing(false);
   };
@@ -69,9 +81,43 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
     }
   };
 
+  const renderMediaItem = (item: MediaItem) => {
+    switch (item.type) {
+      case 'image':
+        return (
+          <img
+            src={item.url}
+            alt={item.name}
+            className="w-full max-h-48 object-contain rounded-lg"
+          />
+        );
+      case 'video':
+        return (
+          <video
+            src={item.url}
+            controls
+            className="w-full max-h-48 rounded-lg"
+          />
+        );
+      case 'url':
+        return (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-700 underline break-all"
+          >
+            {item.name || item.url}
+          </a>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center space-x-3">
             <div
@@ -90,7 +136,7 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
           </Button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]">
           {isEditing ? (
             <>
               <div className="space-y-2">
@@ -114,6 +160,11 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
                 />
               </div>
 
+              <ImageVideoUpload
+                mediaItems={editData.mediaItems}
+                onMediaChange={(mediaItems) => setEditData(prev => ({ ...prev, mediaItems }))}
+              />
+
               <div className="flex space-x-2 pt-4">
                 <Button onClick={handleSave} className="flex-1">
                   <Save className="w-4 h-4 mr-2" />
@@ -129,7 +180,21 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
             <>
               <div>
                 <h3 className="font-semibold text-lg mb-2">{pin.title}</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{pin.description}</p>
+                <p className="text-muted-foreground whitespace-pre-wrap mb-4">{pin.description}</p>
+                
+                {/* Media Display */}
+                {pin.mediaItems && pin.mediaItems.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm text-gray-700">첨부된 미디어</h4>
+                    <div className="space-y-3">
+                      {pin.mediaItems.map((item) => (
+                        <div key={item.id} className="border rounded-lg p-2">
+                          {renderMediaItem(item)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-2 pt-4">

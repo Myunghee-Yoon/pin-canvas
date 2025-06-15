@@ -24,6 +24,13 @@ interface Layer {
   canvasId: string;
 }
 
+interface MediaItem {
+  id: string;
+  type: 'image' | 'video' | 'url';
+  url: string;
+  name?: string;
+}
+
 interface PinData {
   id: string;
   x: number;
@@ -32,6 +39,7 @@ interface PinData {
   description: string;
   layerId: string;
   canvasId: string;
+  mediaItems?: MediaItem[];
 }
 
 const CanvasView = () => {
@@ -148,6 +156,7 @@ const CanvasView = () => {
       description: '핀 설명을 입력하세요',
       layerId: selectedLayerId,
       canvasId: id || '1',
+      mediaItems: [],
     };
 
     const updatedPins = [...pins, newPin];
