@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Eye, EyeOff, Edit, Trash2, Layers, Pin } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, EyeOff, Edit, Trash2, Layers, Pin, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -400,7 +400,7 @@ const CanvasView = () => {
                 style={{ minHeight: '600px' }}
               >
                 <div className="text-center">
-                  <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                  <Image className="w-16 h-16 mx-auto mb-4 opacity-20" />
                   <p className="text-lg font-medium opacity-40">화이트 캔버스</p>
                   <p className="text-sm opacity-30">핀을 추가하려면 클릭하세요</p>
                 </div>
