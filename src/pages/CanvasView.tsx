@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Eye, EyeOff, Edit, Trash2, Layers, Pin } from 'lucide-react';
@@ -6,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PinInfoModal } from '@/components/PinInfoModal';
+import { CreateLayerModal } from '@/components/CreateLayerModal';
 
 interface Canvas {
   id: string;
@@ -43,6 +43,7 @@ const CanvasView = () => {
   const [selectedLayerId, setSelectedLayerId] = useState<string>('');
   const [selectedPin, setSelectedPin] = useState<PinData | null>(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isCreateLayerModalOpen, setIsCreateLayerModalOpen] = useState(false);
 
   useEffect(() => {
     // 로컬 스토리지에서 캔버스 데이터 가져오기
@@ -66,49 +67,71 @@ const CanvasView = () => {
       };
     }
 
-    const mockLayers: Layer[] = [
-      {
-        id: 'layer1',
-        name: '맛집',
-        color: '#ef4444',
-        visible: true,
-        canvasId: id || '1',
-      },
-      {
-        id: 'layer2',
-        name: '관광지',
-        color: '#3b82f6',
-        visible: true,
-        canvasId: id || '1',
-      },
-    ];
+    // 레이어와 핀 데이터 로드
+    const savedLayers = localStorage.getItem(`pincanvas_layers_${id}`);
+    const savedPins = localStorage.getItem(`pincanvas_pins_${id}`);
 
-    const mockPins: PinData[] = [
-      {
-        id: 'pin1',
-        x: 200,
-        y: 150,
-        title: '경복궁',
-        description: '조선 시대의 대표적인 궁궐입니다.\n\n운영시간: 09:00-18:00\n입장료: 성인 3,000원',
-        layerId: 'layer2',
-        canvasId: id || '1',
-      },
-      {
-        id: 'pin2',
-        x: 350,
-        y: 220,
-        title: '명동 교자',
-        description: '유명한 만두 맛집입니다.\n\n추천메뉴: 왕만두, 물만두\n가격대: 10,000원~15,000원',
-        layerId: 'layer1',
-        canvasId: id || '1',
-      },
-    ];
+    let layersData: Layer[] = [];
+    let pinsData: PinData[] = [];
+
+    if (savedLayers) {
+      layersData = JSON.parse(savedLayers);
+    } else {
+      layersData = [
+        {
+          id: 'layer1',
+          name: '맛집',
+          color: '#ef4444',
+          visible: true,
+          canvasId: id || '1',
+        },
+        {
+          id: 'layer2',
+          name: '관광지',
+          color: '#3b82f6',
+          visible: true,
+          canvasId: id || '1',
+        },
+      ];
+      localStorage.setItem(`pincanvas_layers_${id}`, JSON.stringify(layersData));
+    }
+
+    if (savedPins) {
+      pinsData = JSON.parse(savedPins);
+    } else {
+      pinsData = [
+        {
+          id: 'pin1',
+          x: 200,
+          y: 150,
+          title: '경복궁',
+          description: '조선 시대의 대표적인 궁궐입니다.\n\n운영시간: 09:00-18:00\n입장료: 성인 3,000원',
+          layerId: 'layer2',
+          canvasId: id || '1',
+        },
+        {
+          id: 'pin2',
+          x: 350,
+          y: 220,
+          title: '명동 교자',
+          description: '유명한 만두 맛집입니다.\n\n추천메뉴: 왕만두, 물만두\n가격대: 10,000원~15,000원',
+          layerId: 'layer1',
+          canvasId: id || '1',
+        },
+      ];
+      localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(pinsData));
+    }
 
     setCanvas(canvasData);
-    setLayers(mockLayers);
-    setPins(mockPins);
-    setSelectedLayerId(mockLayers[0]?.id || '');
+    setLayers(layersData);
+    setPins(pinsData);
+    setSelectedLayerId(layersData[0]?.id || '');
   }, [id]);
+
+  const saveData = () => {
+    localStorage.setItem(`pincanvas_layers_${id}`, JSON.stringify(layers));
+    localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(pins));
+  };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!selectedLayerId) return;
@@ -127,7 +150,9 @@ const CanvasView = () => {
       canvasId: id || '1',
     };
 
-    setPins([...pins, newPin]);
+    const updatedPins = [...pins, newPin];
+    setPins(updatedPins);
+    localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
   };
 
   const handlePinClick = (pin: PinData) => {
@@ -136,19 +161,61 @@ const CanvasView = () => {
   };
 
   const handlePinUpdate = (updatedPin: PinData) => {
-    setPins(pins.map(pin => pin.id === updatedPin.id ? updatedPin : pin));
+    const updatedPins = pins.map(pin => pin.id === updatedPin.id ? updatedPin : pin);
+    setPins(updatedPins);
+    localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
   };
 
   const handlePinDelete = (pinId: string) => {
-    setPins(pins.filter(pin => pin.id !== pinId));
+    const updatedPins = pins.filter(pin => pin.id !== pinId);
+    setPins(updatedPins);
+    localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
   };
 
   const toggleLayerVisibility = (layerId: string) => {
-    setLayers(layers.map(layer => 
+    const updatedLayers = layers.map(layer => 
       layer.id === layerId 
         ? { ...layer, visible: !layer.visible }
         : layer
-    ));
+    );
+    setLayers(updatedLayers);
+    localStorage.setItem(`pincanvas_layers_${id}`, JSON.stringify(updatedLayers));
+  };
+
+  const handleCreateLayer = (layerData: { name: string; color: string }) => {
+    const newLayer: Layer = {
+      id: `layer${Date.now()}`,
+      name: layerData.name,
+      color: layerData.color,
+      visible: true,
+      canvasId: id || '1',
+    };
+
+    const updatedLayers = [...layers, newLayer];
+    setLayers(updatedLayers);
+    localStorage.setItem(`pincanvas_layers_${id}`, JSON.stringify(updatedLayers));
+  };
+
+  const handleDeleteLayer = (layerId: string) => {
+    if (layers.length <= 1) {
+      alert('최소 하나의 레이어는 필요합니다.');
+      return;
+    }
+
+    if (confirm('이 레이어와 모든 핀을 삭제하시겠습니까?')) {
+      const updatedLayers = layers.filter(layer => layer.id !== layerId);
+      const updatedPins = pins.filter(pin => pin.layerId !== layerId);
+      
+      setLayers(updatedLayers);
+      setPins(updatedPins);
+      
+      localStorage.setItem(`pincanvas_layers_${id}`, JSON.stringify(updatedLayers));
+      localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(updatedPins));
+      
+      if (selectedLayerId === layerId) {
+        setSelectedLayerId(updatedLayers[0]?.id || '');
+      }
+    }
   };
 
   const getVisiblePins = () => {
@@ -200,10 +267,19 @@ const CanvasView = () => {
         {/* Layer Panel */}
         <div className="w-80 bg-white/60 backdrop-blur-sm border-r border-border/50 p-6">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center">
-              <Layers className="w-5 h-5 mr-2" />
-              레이어 관리
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center">
+                <Layers className="w-5 h-5 mr-2" />
+                레이어 관리
+              </h2>
+              <Button
+                size="sm"
+                onClick={() => setIsCreateLayerModalOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                추가
+              </Button>
+            </div>
             
             <div className="space-y-3">
               {layers.map((layer) => (
@@ -242,6 +318,17 @@ const CanvasView = () => {
                             <EyeOff className="w-4 h-4" />
                           )}
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-8 h-8 text-red-500 hover:text-red-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLayer(layer.id);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                     
@@ -260,6 +347,7 @@ const CanvasView = () => {
               <li>• 레이어를 선택한 후 캔버스를 클릭하여 핀 추가</li>
               <li>• 눈 아이콘으로 레이어 표시/숨김</li>
               <li>• 핀을 클릭하여 정보 확인</li>
+              <li>• 휴지통 아이콘으로 레이어 삭제</li>
             </ul>
           </div>
         </div>
@@ -308,6 +396,13 @@ const CanvasView = () => {
         onUpdate={handlePinUpdate}
         onDelete={handlePinDelete}
         layerColor={selectedPin ? getLayerColor(selectedPin.layerId) : '#6b7280'}
+      />
+
+      {/* Create Layer Modal */}
+      <CreateLayerModal
+        isOpen={isCreateLayerModalOpen}
+        onClose={() => setIsCreateLayerModalOpen(false)}
+        onSubmit={handleCreateLayer}
       />
     </div>
   );

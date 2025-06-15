@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Edit, Trash2, Save, Cancel } from 'lucide-react';
+import { X, Edit, Trash2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -120,7 +120,7 @@ export const PinInfoModal: React.FC<PinInfoModalProps> = ({
                   저장
                 </Button>
                 <Button variant="outline" onClick={handleCancel} className="flex-1">
-                  <Cancel className="w-4 h-4 mr-2" />
+                  <X className="w-4 h-4 mr-2" />
                   취소
                 </Button>
               </div>
