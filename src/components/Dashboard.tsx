@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ export const Dashboard: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [canvases, setCanvases] = useState<Canvas[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'pins'>('date');
 
   useEffect(() => {
     // 로컬 스토리지에서 캔버스 목록 불러오기
@@ -131,7 +131,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Canvas Grid */}
-        <CanvasGrid canvases={filteredCanvases} />
+        <CanvasGrid searchQuery={searchTerm} sortBy={sortBy} />
       </main>
 
       {/* Create Canvas Modal */}
