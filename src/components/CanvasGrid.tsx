@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Pin, Layers, MoreVertical, Edit, Trash2, Share2 } from 'lucide-react';
+import { Plus, Calendar, Pin, Layers, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CreateCanvasModal } from './CreateCanvasModal';
-import ShareModal from './ShareModal';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -35,31 +32,56 @@ import {
 interface Canvas {
   id: string;
   title: string;
-  image_url: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
+  imageUrl: string;
+  createdAt: Date;
+  pinCount: number;
+  layerCount: number;
 }
 
 interface CanvasGridProps {
   searchQuery: string;
   sortBy: 'date' | 'name' | 'pins';
-  canvases: Canvas[];
-  onCanvasesChange: (canvases: Canvas[]) => void;
 }
 
-export const CanvasGrid: React.FC<CanvasGridProps> = ({ 
-  searchQuery, 
-  sortBy, 
-  canvases, 
-  onCanvasesChange 
-}) => {
+export const CanvasGrid: React.FC<CanvasGridProps> = ({ searchQuery, sortBy }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const [canvases, setCanvases] = useState<Canvas[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deleteCanvasId, setDeleteCanvasId] = useState<string | null>(null);
-  const [shareModalCanvas, setShareModalCanvas] = useState<Canvas | null>(null);
+
+  useEffect(() => {
+    // 로컬 스토리지에서 캔버스 데이터 로드
+    const savedCanvases = localStorage.getItem('pincanvas_canvases');
+    if (savedCanvases) {
+      const parsedCanvases = JSON.parse(savedCanvases).map((canvas: any) => ({
+        ...canvas,
+        createdAt: new Date(canvas.createdAt)
+      }));
+      setCanvases(parsedCanvases);
+    } else {
+      // 기본 데이터
+      const defaultCanvases: Canvas[] = [
+        {
+          id: '1',
+          title: '서울 여행 계획',
+          imageUrl: '/placeholder.svg',
+          createdAt: new Date('2024-01-15'),
+          pinCount: 12,
+          layerCount: 3,
+        },
+        {
+          id: '2',
+          title: '프로젝트 기획서',
+          imageUrl: '/placeholder.svg',
+          createdAt: new Date('2024-01-20'),
+          pinCount: 8,
+          layerCount: 2,
+        },
+      ];
+      setCanvases(defaultCanvases);
+      localStorage.setItem('pincanvas_canvases', JSON.stringify(defaultCanvases));
+    }
+  }, []);
 
   const filteredAndSortedCanvases = canvases
     .filter(canvas => 
@@ -70,84 +92,50 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
         case 'name':
           return a.title.localeCompare(b.title);
         case 'pins':
-          // TODO: Add pin count to canvas data
-          return 0;
+          return b.pinCount - a.pinCount;
         case 'date':
         default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return b.createdAt.getTime() - a.createdAt.getTime();
       }
     });
 
-  const handleCreateCanvas = async (canvasData: { title: string; imageUrl?: string }) => {
-    if (!user) return;
+  const handleCreateCanvas = (canvasData: Omit<Canvas, 'id' | 'createdAt' | 'pinCount' | 'layerCount'>) => {
+    const newCanvas: Canvas = {
+      ...canvasData,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+      pinCount: 0,
+      layerCount: 1,
+    };
 
-    try {
-      const { data, error } = await supabase
-        .from('canvases')
-        .insert({
-          title: canvasData.title,
-          image_url: canvasData.imageUrl || '/placeholder.svg',
-          owner_id: user.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: "캔버스 생성됨",
-        description: "새 캔버스가 성공적으로 생성되었습니다.",
-      });
-
-      onCanvasesChange([data, ...canvases]);
-      setIsCreateModalOpen(false);
-    } catch (error: any) {
-      toast({
-        title: "캔버스 생성 실패",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    const updatedCanvases = [...canvases, newCanvas];
+    setCanvases(updatedCanvases);
+    localStorage.setItem('pincanvas_canvases', JSON.stringify(updatedCanvases));
   };
 
-  const handleDeleteCanvas = async (canvasId: string) => {
-    try {
-      const { error } = await supabase
-        .from('canvases')
-        .delete()
-        .eq('id', canvasId);
-
-      if (error) throw error;
-
-      toast({
-        title: "캔버스 삭제됨",
-        description: "캔버스가 성공적으로 삭제되었습니다.",
-      });
-
-      onCanvasesChange(canvases.filter(canvas => canvas.id !== canvasId));
-      setDeleteCanvasId(null);
-    } catch (error: any) {
-      toast({
-        title: "삭제 실패",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const handleDeleteCanvas = (canvasId: string) => {
+    const updatedCanvases = canvases.filter(canvas => canvas.id !== canvasId);
+    setCanvases(updatedCanvases);
+    localStorage.setItem('pincanvas_canvases', JSON.stringify(updatedCanvases));
+    
+    // 관련 레이어와 핀 데이터도 삭제
+    localStorage.removeItem(`pincanvas_layers_${canvasId}`);
+    localStorage.removeItem(`pincanvas_pins_${canvasId}`);
+    
+    setDeleteCanvasId(null);
   };
 
   const handleCanvasClick = (canvasId: string) => {
     navigate(`/canvas/${canvasId}`);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('ko-KR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    }).format(new Date(dateString));
+    }).format(date);
   };
-
-  const isOwner = (canvas: Canvas) => canvas.owner_id === user?.id;
 
   return (
     <>
@@ -171,21 +159,12 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
               <Card className="cursor-pointer hover:shadow-lg transition-shadow group relative">
                 <div className="relative">
                   <img
-                    src={canvas.image_url}
+                    src={canvas.imageUrl}
                     alt={canvas.title}
                     className="w-full h-32 object-cover rounded-t-lg"
                     onClick={() => handleCanvasClick(canvas.id)}
                   />
-                  {/* Owner Badge */}
-                  {!isOwner(canvas) && (
-                    <Badge 
-                      variant="secondary" 
-                      className="absolute top-2 left-2 bg-blue-100 text-blue-800"
-                    >
-                      공유됨
-                    </Badge>
-                  )}
-                  {/* Menu Button */}
+                  {/* 삼점 메뉴 버튼 */}
                   <div className="absolute top-2 right-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -203,21 +182,13 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
                           <Edit className="w-4 h-4 mr-2" />
                           열기
                         </DropdownMenuItem>
-                        {isOwner(canvas) && (
-                          <>
-                            <DropdownMenuItem onClick={() => setShareModalCanvas(canvas)}>
-                              <Share2 className="w-4 h-4 mr-2" />
-                              공유
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => setDeleteCanvasId(canvas.id)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              삭제
-                            </DropdownMenuItem>
-                          </>
-                        )}
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteCanvasId(canvas.id)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          삭제
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -230,21 +201,21 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-1">
                         <Pin className="w-4 h-4" />
-                        <span>0</span>
+                        <span>{canvas.pinCount}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Layers className="w-4 h-4" />
-                        <span>0</span>
+                        <span>{canvas.layerCount}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                       <Calendar className="w-3 h-3" />
-                      <span>{formatDate(canvas.created_at)}</span>
+                      <span>{formatDate(canvas.createdAt)}</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {isOwner(canvas) ? '내 캔버스' : '공유됨'}
+                      캔버스
                     </Badge>
                   </div>
                 </CardContent>
@@ -255,21 +226,13 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
                 <Edit className="w-4 h-4 mr-2" />
                 열기
               </ContextMenuItem>
-              {isOwner(canvas) && (
-                <>
-                  <ContextMenuItem onClick={() => setShareModalCanvas(canvas)}>
-                    <Share2 className="w-4 h-4 mr-2" />
-                    공유
-                  </ContextMenuItem>
-                  <ContextMenuItem 
-                    onClick={() => setDeleteCanvasId(canvas.id)}
-                    className="text-red-600 focus:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    삭제
-                  </ContextMenuItem>
-                </>
-              )}
+              <ContextMenuItem 
+                onClick={() => setDeleteCanvasId(canvas.id)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                삭제
+              </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
         ))}
@@ -281,16 +244,6 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateCanvas}
       />
-
-      {/* Share Modal */}
-      {shareModalCanvas && (
-        <ShareModal
-          isOpen={!!shareModalCanvas}
-          onClose={() => setShareModalCanvas(null)}
-          canvasId={shareModalCanvas.id}
-          canvasTitle={shareModalCanvas.title}
-        />
-      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteCanvasId} onOpenChange={() => setDeleteCanvasId(null)}>
