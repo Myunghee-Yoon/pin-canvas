@@ -35,8 +35,8 @@ interface MediaItem {
 
 interface PinData {
   id: string;
-  x: number;
-  y: number;
+  x: number; // 상대적 위치 (0-1 범위)
+  y: number; // 상대적 위치 (0-1 범위)
   title: string;
   description: string;
   layerId: string;
@@ -114,8 +114,8 @@ const CanvasView = () => {
       pinsData = [
         {
           id: 'pin1',
-          x: 200,
-          y: 150,
+          x: 0.25,
+          y: 0.25,
           title: '경복궁',
           description: '조선 시대의 대표적인 궁궐입니다.\n\n운영시간: 09:00-18:00\n입장료: 성인 3,000원',
           layerId: 'layer2',
@@ -123,8 +123,8 @@ const CanvasView = () => {
         },
         {
           id: 'pin2',
-          x: 350,
-          y: 220,
+          x: 0.4375,
+          y: 0.367,
           title: '명동 교자',
           description: '유명한 만두 맛집입니다.\n\n추천메뉴: 왕만두, 물만두\n가격대: 10,000원~15,000원',
           layerId: 'layer1',
@@ -163,13 +163,17 @@ const CanvasView = () => {
     if (!selectedLayerId) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    // 상대적 비율로 변환 (0-1 범위)
+    const relativeX = clickX / rect.width;
+    const relativeY = clickY / rect.height;
 
     const newPin: PinData = {
       id: `pin${Date.now()}`,
-      x,
-      y,
+      x: relativeX,
+      y: relativeY,
       title: '새 핀',
       description: '핀 설명을 입력하세요',
       layerId: selectedLayerId,
@@ -424,7 +428,7 @@ const CanvasView = () => {
           )}
 
           <div
-            className={`relative bg-white rounded-lg shadow-lg overflow-hidden ${isPresentationMode ? 'w-full h-full cursor-default' : 'cursor-crosshair'}`}
+            className={`canvas-container relative bg-white rounded-lg shadow-lg overflow-hidden ${isPresentationMode ? 'w-full h-full cursor-default' : 'cursor-crosshair'}`}
             style={{ minHeight: '600px' }}
             onClick={isPresentationMode ? undefined : handleCanvasClick}
           >
@@ -455,8 +459,9 @@ const CanvasView = () => {
                   <div
                     className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center"
                     style={{
-                      left: pin.x - 12,
-                      top: pin.y - 12,
+                      left: `${pin.x * 100}%`,
+                      top: `${pin.y * 100}%`,
+                      transform: 'translate(-50%, -50%)',
                       backgroundColor: getLayerColor(pin.layerId),
                     }}
                     onClick={(e) => {
