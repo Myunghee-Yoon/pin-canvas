@@ -159,16 +159,53 @@ const CanvasView = () => {
     localStorage.setItem(`pincanvas_pins_${id}`, JSON.stringify(pins));
   };
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!selectedLayerId) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+  const getImageDimensions = (imgElement: HTMLImageElement, containerElement: HTMLElement) => {
+    const containerRect = containerElement.getBoundingClientRect();
+    const imgNaturalRatio = imgElement.naturalWidth / imgElement.naturalHeight;
+    const containerRatio = containerRect.width / containerRect.height;
     
-    // 상대적 비율로 변환 (0-1 범위)
-    const relativeX = clickX / rect.width;
-    const relativeY = clickY / rect.height;
+    let imgDisplayWidth, imgDisplayHeight, imgOffsetX, imgOffsetY;
+    
+    if (imgNaturalRatio > containerRatio) {
+      // 이미지가 컨테이너보다 가로로 넓음 - 가로 기준으로 맞춤
+      imgDisplayWidth = containerRect.width;
+      imgDisplayHeight = containerRect.width / imgNaturalRatio;
+      imgOffsetX = 0;
+      imgOffsetY = (containerRect.height - imgDisplayHeight) / 2;
+    } else {
+      // 이미지가 컨테이너보다 세로로 높음 - 세로 기준으로 맞춤
+      imgDisplayWidth = containerRect.height * imgNaturalRatio;
+      imgDisplayHeight = containerRect.height;
+      imgOffsetX = (containerRect.width - imgDisplayWidth) / 2;
+      imgOffsetY = 0;
+    }
+    
+    return { imgDisplayWidth, imgDisplayHeight, imgOffsetX, imgOffsetY };
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!selectedLayerId || !canvas?.imageUrl) return;
+
+    const containerElement = e.currentTarget;
+    const imgElement = containerElement.querySelector('img') as HTMLImageElement;
+    
+    if (!imgElement) return;
+
+    const containerRect = containerElement.getBoundingClientRect();
+    const clickX = e.clientX - containerRect.left;
+    const clickY = e.clientY - containerRect.top;
+    
+    const { imgDisplayWidth, imgDisplayHeight, imgOffsetX, imgOffsetY } = getImageDimensions(imgElement, containerElement);
+    
+    // 클릭이 이미지 영역 안에 있는지 확인
+    if (clickX < imgOffsetX || clickX > imgOffsetX + imgDisplayWidth ||
+        clickY < imgOffsetY || clickY > imgOffsetY + imgDisplayHeight) {
+      return; // 이미지 영역 밖이면 핀 생성하지 않음
+    }
+    
+    // 이미지 영역 내에서의 상대적 위치 계산 (0-1 범위)
+    const relativeX = (clickX - imgOffsetX) / imgDisplayWidth;
+    const relativeY = (clickY - imgOffsetY) / imgDisplayHeight;
 
     const newPin: PinData = {
       id: `pin${Date.now()}`,
@@ -453,80 +490,98 @@ const CanvasView = () => {
             )}
             
             {/* Pins with HoverCard */}
-            {getVisiblePins().map((pin) => (
-              <HoverCard key={pin.id} openDelay={300} closeDelay={100}>
-                <HoverCardTrigger asChild>
-                  <div
-                    className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center"
-                    style={{
-                      left: `${pin.x * 100}%`,
-                      top: `${pin.y * 100}%`,
-                      transform: 'translate(-50%, -50%)',
-                      backgroundColor: getLayerColor(pin.layerId),
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePinClick(pin);
-                    }}
-                  >
-                    <Pin className="w-3 h-3 text-white" />
-                  </div>
+            {canvas.imageUrl && getVisiblePins().map((pin) => {
+              const containerElement = document.querySelector('.canvas-container') as HTMLElement;
+              const imgElement = containerElement?.querySelector('img') as HTMLImageElement;
+              
+              if (!containerElement || !imgElement) return null;
+              
+              const { imgDisplayWidth, imgDisplayHeight, imgOffsetX, imgOffsetY } = getImageDimensions(imgElement, containerElement);
+              
+              // 이미지 영역 내에서의 실제 위치 계산
+              const actualX = imgOffsetX + (pin.x * imgDisplayWidth);
+              const actualY = imgOffsetY + (pin.y * imgDisplayHeight);
+              
+              // 컨테이너 크기 대비 퍼센트로 변환
+              const containerRect = containerElement.getBoundingClientRect();
+              const leftPercent = (actualX / containerRect.width) * 100;
+              const topPercent = (actualY / containerRect.height) * 100;
+              
+              return (
+                <HoverCard key={pin.id} openDelay={300} closeDelay={100}>
+                  <HoverCardTrigger asChild>
+                    <div
+                      className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center"
+                      style={{
+                        left: `${leftPercent}%`,
+                        top: `${topPercent}%`,
+                        transform: 'translate(-50%, -50%)',
+                        backgroundColor: getLayerColor(pin.layerId),
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePinClick(pin);
+                      }}
+                    >
+                      <Pin className="w-3 h-3 text-white" />
+                    </div>
                 </HoverCardTrigger>
-                <HoverCardContent className="w-80" side="right" align="start">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getLayerColor(pin.layerId) }}
-                      />
-                      <h4 className="font-semibold text-sm">{pin.title}</h4>
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground">
-                      <p className="whitespace-pre-wrap line-clamp-4">
-                        {pin.description}
-                      </p>
-                    </div>
-
-                    {pin.mediaItems && pin.mediaItems.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">첨부된 미디어:</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {pin.mediaItems.slice(0, 4).map((media, index) => (
-                            <div key={media.id || index} className="relative">
-                              {media.type === 'image' ? (
-                                <img
-                                  src={media.url}
-                                  alt={media.name || `미디어 ${index + 1}`}
-                                  className="w-full h-16 object-cover rounded border"
-                                />
-                              ) : media.type === 'video' ? (
-                                <div className="w-full h-16 bg-gray-100 rounded border flex items-center justify-center">
-                                  <span className="text-xs text-gray-500">동영상</span>
-                                </div>
-                              ) : (
-                                <div className="w-full h-16 bg-blue-50 rounded border flex items-center justify-center">
-                                  <span className="text-xs text-blue-600">링크</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {pin.mediaItems.length > 4 && (
-                            <div className="w-full h-16 bg-gray-50 rounded border flex items-center justify-center">
-                              <span className="text-xs text-gray-500">+{pin.mediaItems.length - 4}개 더</span>
-                            </div>
-                          )}
-                        </div>
+                  <HoverCardContent className="w-80" side="right" align="start">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: getLayerColor(pin.layerId) }}
+                        />
+                        <h4 className="font-semibold text-sm">{pin.title}</h4>
                       </div>
-                    )}
-                    
-                    <div className="text-xs text-muted-foreground pt-2 border-t">
-                      클릭하여 자세히 보기
+                      
+                      <div className="text-sm text-muted-foreground">
+                        <p className="whitespace-pre-wrap line-clamp-4">
+                          {pin.description}
+                        </p>
+                      </div>
+
+                      {pin.mediaItems && pin.mediaItems.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">첨부된 미디어:</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {pin.mediaItems.slice(0, 4).map((media, index) => (
+                              <div key={media.id || index} className="relative">
+                                {media.type === 'image' ? (
+                                  <img
+                                    src={media.url}
+                                    alt={media.name || `미디어 ${index + 1}`}
+                                    className="w-full h-16 object-cover rounded border"
+                                  />
+                                ) : media.type === 'video' ? (
+                                  <div className="w-full h-16 bg-gray-100 rounded border flex items-center justify-center">
+                                    <span className="text-xs text-gray-500">동영상</span>
+                                  </div>
+                                ) : (
+                                  <div className="w-full h-16 bg-blue-50 rounded border flex items-center justify-center">
+                                    <span className="text-xs text-blue-600">링크</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {pin.mediaItems.length > 4 && (
+                              <div className="w-full h-16 bg-gray-50 rounded border flex items-center justify-center">
+                                <span className="text-xs text-gray-500">+{pin.mediaItems.length - 4}개 더</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="text-xs text-muted-foreground pt-2 border-t">
+                        클릭하여 자세히 보기
+                      </div>
                     </div>
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            ))}
+                  </HoverCardContent>
+                </HoverCard>
+              );
+            })}
           </div>
         </div>
       </div>
