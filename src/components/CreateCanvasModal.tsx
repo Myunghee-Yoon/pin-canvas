@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { X, Upload, Image as ImageIcon, Zap, Gauge, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,6 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
     resolution: 'high' // 'original', 'high', 'medium'
   });
   const [dragActive, setDragActive] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string>('');
 
   if (!isOpen) return null;
 
@@ -50,14 +50,6 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
       const file = files[0];
       if (file.type.startsWith('image/')) {
         setFormData(prev => ({ ...prev, imageFile: file }));
-        
-        // 이미지 미리보기 생성
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setImagePreview(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-        
         toast.success(`이미지 "${file.name}"이 업로드되었습니다.`);
       } else {
         toast.error('이미지 파일만 업로드 가능합니다.');
@@ -65,25 +57,10 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
     }
   };
 
-  const handleFileButtonClick = () => {
-    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.click();
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFormData(prev => ({ ...prev, imageFile: file }));
-      
-      // 이미지 미리보기 생성
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      
       toast.success(`이미지 "${file.name}"이 업로드되었습니다.`);
     }
   };
@@ -95,23 +72,19 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
       toast.error('제목을 입력해주세요.');
       return;
     }
-
-    // 이미지가 없으면 빈 화이트 캔버스로 생성
-    const canvasData = {
-      ...formData,
-      imageUrl: imagePreview || '' // 이미지가 없으면 빈 문자열
-    };
-
-    onSubmit(canvasData);
     
-    // 폼 초기화
+    if (!formData.imageFile) {
+      toast.error('배경 이미지를 업로드해주세요.');
+      return;
+    }
+
+    onSubmit(formData);
     setFormData({
       title: '',
       description: '',
       imageFile: null,
       resolution: 'high'
     });
-    setImagePreview('');
     toast.success('새 캔버스가 생성되었습니다!');
   };
 
@@ -188,10 +161,7 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
 
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">배경 이미지 (선택사항)</Label>
-            <p className="text-xs text-muted-foreground mb-2">
-              이미지를 업로드하지 않으면 화이트 캔버스로 생성됩니다
-            </p>
+            <Label className="text-sm font-medium">배경 이미지 *</Label>
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                 dragActive 
@@ -203,25 +173,18 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
               onDragOver={handleDrag}
               onDrop={handleDrop}
             >
-              {imagePreview ? (
+              {formData.imageFile ? (
                 <div className="space-y-2">
-                  <img 
-                    src={imagePreview} 
-                    alt="미리보기" 
-                    className="max-h-32 mx-auto rounded-lg border"
-                  />
-                  <p className="font-medium text-green-600">{formData.imageFile?.name}</p>
+                  <ImageIcon className="w-8 h-8 text-green-600 mx-auto" />
+                  <p className="font-medium text-green-600">{formData.imageFile.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {formData.imageFile ? (formData.imageFile.size / 1024 / 1024).toFixed(2) : 0} MB
+                    {(formData.imageFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, imageFile: null }));
-                      setImagePreview('');
-                    }}
+                    onClick={() => setFormData(prev => ({ ...prev, imageFile: null }))}
                   >
                     다른 이미지 선택
                   </Button>
@@ -238,48 +201,44 @@ export const CreateCanvasModal: React.FC<CreateCanvasModalProps> = ({
                       className="hidden"
                       id="image-upload"
                     />
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={handleFileButtonClick}
-                    >
-                      파일 선택
-                    </Button>
+                    <Label htmlFor="image-upload" asChild>
+                      <Button type="button" variant="outline">
+                        파일 선택
+                      </Button>
+                    </Label>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    JPG, PNG, GIF 파일 지원 • 업로드하지 않으면 화이트 캔버스
+                    JPG, PNG, GIF 파일 지원
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Resolution Options - only show when image is uploaded */}
-          {imagePreview && (
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">해상도 옵션</Label>
-              <RadioGroup
-                value={formData.resolution}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, resolution: value }))}
-                className="space-y-3"
-              >
-                {resolutionOptions.map((option) => (
-                  <Card key={option.value} className="border-2 hover:border-blue-200 transition-colors">
-                    <CardContent className="flex items-center space-x-3 p-4">
-                      <RadioGroupItem value={option.value} id={option.value} />
-                      <option.icon className={`w-5 h-5 ${option.color}`} />
-                      <div className="flex-1">
-                        <Label htmlFor={option.value} className="text-base font-medium cursor-pointer">
-                          {option.label}
-                        </Label>
-                        <p className="text-sm text-muted-foreground">{option.description}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </RadioGroup>
-            </div>
-          )}
+          {/* Resolution Options */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">해상도 옵션</Label>
+            <RadioGroup
+              value={formData.resolution}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, resolution: value }))}
+              className="space-y-3"
+            >
+              {resolutionOptions.map((option) => (
+                <Card key={option.value} className="border-2 hover:border-blue-200 transition-colors">
+                  <CardContent className="flex items-center space-x-3 p-4">
+                    <RadioGroupItem value={option.value} id={option.value} />
+                    <option.icon className={`w-5 h-5 ${option.color}`} />
+                    <div className="flex-1">
+                      <Label htmlFor={option.value} className="text-base font-medium cursor-pointer">
+                        {option.label}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">{option.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </RadioGroup>
+          </div>
 
           {/* Submit Buttons */}
           <div className="flex space-x-3 pt-4">
